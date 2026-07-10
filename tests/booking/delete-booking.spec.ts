@@ -1,7 +1,7 @@
 import { test, expect } from '@fixtures/index';
 import { DataUtils } from '@utils/data.utils';
 
-test.describe('Delete Booking API Tests @booking', () => {
+test.describe('Delete Booking API Tests @booking @regression', () => {
   let bookingId: number;
 
   test.beforeEach(async ({ bookingService, apiClient, workerToken, cleanup }) => {

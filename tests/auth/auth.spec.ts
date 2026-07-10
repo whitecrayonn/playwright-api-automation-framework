@@ -2,7 +2,7 @@ import { test, expect } from '@fixtures/index';
 import { AUTH_RESPONSE_SCHEMA } from '@schemas/auth.schema';
 import { config } from '@config/config';
 
-test.describe('Authentication API Tests @auth', () => {
+test.describe('Authentication API Tests @auth @regression', () => {
   test('should successfully generate an auth token with valid credentials', async ({
     authService,
     schemaValidator,

@@ -2,7 +2,7 @@ import { test, expect } from '@fixtures/index';
 import { BOOKING_IDS_SCHEMA, BOOKING_SCHEMA } from '@schemas/booking.schema';
 import { DataUtils } from '@utils/data.utils';
 
-test.describe('Get Booking API Tests @booking', () => {
+test.describe('Get Booking API Tests @booking @regression', () => {
   test('should successfully retrieve all booking IDs', async ({
     bookingService,
     schemaValidator,

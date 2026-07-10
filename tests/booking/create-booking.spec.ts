@@ -2,7 +2,7 @@ import { test, expect } from '@fixtures/index';
 import { CREATE_BOOKING_RESPONSE_SCHEMA } from '@schemas/booking.schema';
 import { DataUtils } from '@utils/data.utils';
 
-test.describe('Create Booking API Tests @booking', () => {
+test.describe('Create Booking API Tests @booking @regression', () => {
   test('should successfully create a new booking', async ({
     bookingService,
     schemaValidator,
