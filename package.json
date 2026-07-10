@@ -1,0 +1,32 @@
+{
+  "name": "playwright-api-automation-framework",
+  "version": "1.0.0",
+  "description": "Enterprise-grade API Automation Framework built with Playwright & TypeScript.",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:regression": "playwright test --grep @regression",
+    "test:auth": "playwright test tests/auth/",
+    "test:booking": "playwright test tests/booking/",
+    "report": "playwright show-report ./reports/html"
+  },
+  "keywords": [
+    "playwright",
+    "api",
+    "automation",
+    "typescript",
+    "qa"
+  ],
+  "author": "Jonathan Audris Heriyanto",
+  "license": "MIT",
+  "devDependencies": {
+    "@faker-js/faker": "^10.5.0",
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^26.1.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "dotenv": "^17.4.2",
+    "typescript": "^5.8.3"
+  }
+}

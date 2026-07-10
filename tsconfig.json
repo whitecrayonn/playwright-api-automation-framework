@@ -1,0 +1,32 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "esModuleInterop": true,
+        "resolveJsonModule": true,
+        "types": [
+            "node"
+        ],
+        "skipLibCheck": true,
+        "baseUrl": ".",
+        "paths": {
+            "@clients/*": ["src/clients/*"],
+            "@config/*": ["src/config/*"],
+            "@constants/*": ["src/constants/*"],
+            "@fixtures/*": ["src/fixtures/*"],
+            "@schemas/*": ["src/schemas/*"],
+            "@services/*": ["src/services/*"],
+            "@app-types/*": ["src/types/*"],
+            "@utils/*": ["src/utils/*"],
+            "@validators/*": ["src/validators/*"]
+        }
+    },
+    "include": [
+        "src",
+        "tests"
+    ]
+}

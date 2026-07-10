@@ -1,0 +1,44 @@
+name: API Automation Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 0 * * *' # Run daily at midnight UTC
+
+jobs:
+  test:
+    name: Run Playwright API Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Create .env File
+        run: |
+          echo "BASE_URL=${{ secrets.BASE_URL || 'https://restful-booker.herokuapp.com' }}" >> .env
+          echo "AUTH_USERNAME=${{ secrets.AUTH_USERNAME || 'admin' }}" >> .env
+          echo "AUTH_PASSWORD=${{ secrets.AUTH_PASSWORD || 'password123' }}" >> .env
+
+      - name: Execute Test Suite
+        run: npm run test
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: reports/html/
+          retention-days: 30
