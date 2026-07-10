@@ -6,65 +6,61 @@ This document outlines the architectural blueprint, design choices, and data flo
 
 ## 🏗️ Structural Overview
 
-```
-                          ┌───────────────────────┐
-                          │         Tests         │
-                          └───────────┬───────────┘
-                                      │
-                         (dependency injection via fixtures)
-                                      ▼
-                          ┌───────────────────────┐
-                          │       Services        │
-                          └───────────┬───────────┘
-                                      │
-                       (composed helper endpoints/payloads)
-                                      ▼
-                          ┌───────────────────────┐
-                          │       ApiClient       │
-                          └───────────┬───────────┘
-                                      │
-                     (low-level HTTP client wrapping PW)
-                                      ▼
-                    ┌───────────────────────────────────┐
-                    │ Playwright HTTP Request Context   │
-                    └───────────────────────────────────┘
+The framework is structured as a unidirectional dependency graph, ensuring that high-level layers depend on lower-level abstractions rather than concrete implementations.
+
+```mermaid
+graph TD
+    classDef layer fill:#f9f9f9,stroke:#333,stroke-width:1px;
+    
+    Tests[Spec Tests] -->|Injected via| Fixtures[Playwright Fixtures]
+    Fixtures -->|Instantiates| Services[Domain Services]
+    Services -->|Composes| ApiClient[ApiClient Wrapper]
+    ApiClient -->|Wraps| PWContext[Playwright APIRequestContext]
+
+    class Tests,Fixtures,Services,ApiClient,PWContext layer;
 ```
 
 ---
 
 ## 🏛️ Architectural Layers
 
-### 1. Configuration Layer (`src/config/`)
-- **`env.ts`**: The single source of truth for raw environment boundary checks. It validates properties inside `process.env` immediately upon import, throwing descriptive exceptions on configuration mismatch. This prevents silent execution failures.
-- **`config.ts`**: Builds a strongly-typed, read-only configuration schema structure (`AppConfig`) from the validated variables, which is then safely consumed by tests, Playwright configs, or services.
+### 1. Configuration Layer
+* **[env.ts](file:///c:/Portofolio/playwright-api-automation-framework/src/config/env.ts)**: Serves as the validation gateway for environment variables. It parses `process.env` immediately at startup and throws structured validation errors if required variables are missing or incorrectly formatted. This prevents runtime failures from silent configuration issues.
+* **[config.ts](file:///c:/Portofolio/playwright-api-automation-framework/src/config/config.ts)**: Builds a strongly-typed, read-only configuration schema structure (`AppConfig`) from validated variables, which is safely consumed across tests, Playwright configurations, and services.
 
-### 2. Transport Client Layer (`src/clients/`)
-- **`ApiClient.ts`**: Exposes generic, lightweight, type-safe wrapper methods (`get`, `post`, `put`, `patch`, `delete`) to handle Playwright's `APIRequestContext` interactions.
-- **Rules**:
-  - Never throws exceptions on non-2xx status codes (to support assertion validation on error scenarios like `401 Unauthorized` or `404 Not Found`).
-  - Standardizes the response format wrapping data, execution response time, headers, and parsed content inside `ApiResponse<T>`.
+### 2. Transport Client Layer
+* **[ApiClient.ts](file:///c:/Portofolio/playwright-api-automation-framework/src/clients/ApiClient.ts)**: A generic, type-safe wrapper over Playwright's `APIRequestContext` that standardizes request options (`ApiRequestOptions`) and response structures (`ApiResponse<T>`).
+* **Key Design Constraints**:
+  - It does not throw exceptions on non-2xx status codes, enabling assertion validation for expected error paths (e.g., `401 Unauthorized`, `404 Not Found`).
+  - Standardizes error and metadata reporting (e.g., parsing response bodies and measuring execution response times).
 
-### 3. Business Service Layer (`src/services/`)
-- Services wrap discrete functional domains of the product under test (e.g., `AuthService`, `BookingService`).
-- Uses composition of `ApiClient` to map functional inputs to network transport calls, managing endpoints registry configuration and token inclusion headers dynamically.
+### 3. Business Service Layer
+* **Domain Services** (e.g., [BookingService.ts](file:///c:/Portofolio/playwright-api-automation-framework/src/services/BookingService.ts), `AuthService.ts`): Wrap discrete business domains. They map business operations to HTTP actions using the common `ApiClient` transport.
+* Services are responsible for managing route endpoints, path parameter interpolation, and authentication headers, isolating spec tests from direct URL and payload formatting.
 
-### 4. Schema Verification & Validation Layer (`src/validators/` & `src/schemas/`)
-- Uses AJV and `ajv-formats` to perform full runtime schema validations against JSON payloads in one line inside test steps, isolating verification models from domain wrappers.
+### 4. Contract Validation Layer
+* **[SchemaValidator.ts](file:///c:/Portofolio/playwright-api-automation-framework/src/validators/SchemaValidator.ts)**: Integrates AJV schema validation into the test assertion pipeline. It compiles and caches JSON Schema validator functions dynamically, preventing CPU overhead during repetitive iterations of automated regression runs.
 
 ---
 
 ## ⚡ Data Flow Pipeline
 
-```
-.env (Secrets) ──▶ env.ts (Validation) ──▶ config.ts (Structure) ──▶ playwright.config.ts / Services
+The framework ensures that initialization configuration flows strictly downward from environment variables to test execution contexts:
+
+```mermaid
+graph LR
+    EnvFile[.env File] -->|Loads| EnvValidator[env.ts Validation]
+    EnvValidator -->|Constructs| ConfigObj[config.ts Read-Only Schema]
+    ConfigObj -->|Configures| PWConfig[playwright.config.ts]
+    ConfigObj -->|Configures| DomainServices[Domain Services]
 ```
 
 ---
 
 ## 🎨 Core Design Decisions & SOLID Compliance
 
-- **Single Responsibility Principle (SRP)**: Each class has a single focus. `SchemaValidator` only validates structures; `ApiClient` only executes HTTP calls; `BookingService` only manages booking-domain concerns.
-- **Open/Closed Principle (OCP)**: Adding new endpoints or API domains only requires writing new `services/` and `types/` definitions—never modifying the underlying `ApiClient` transport core.
-- **Dependency Inversion Principle (DIP)**: High-level test components do not instantiate services or transport layers directly. Services are injected via Playwright fixtures container hooks (`src/fixtures/index.ts`).
-- **No Direct Environment Access**: Tests and services are decoupled from the system platform variables. No `process.env` calls are present inside tests.
-- **Composition over Inheritance**: Services delegate low-level request tasks to the `ApiClient` through configuration composition rather than extending base classes.
+* **Single Responsibility Principle (SRP):** Classes maintain a single focus. `SchemaValidator` only validates data structures, `ApiClient` executes network transport, and `BookingService` handles business operations.
+* **Open/Closed Principle (OCP):** Adding new API endpoints requires writing new services and schema types without modifying the underlying `ApiClient` core.
+* **Dependency Inversion Principle (DIP):** Spec tests do not instantiate services or clients. All dependencies are configured and injected dynamically through custom test fixtures in [fixtures/index.ts](file:///c:/Portofolio/playwright-api-automation-framework/src/fixtures/index.ts).
+* **Composition over Inheritance:** Domain services delegate low-level request execution to `ApiClient` using configuration composition rather than extending base classes.
+* **Zero Direct Environment Access:** Spec tests and services are completely decoupled from host platform environment variables. Direct `process.env` calls are restricted to the configuration layer.

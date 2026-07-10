@@ -5,100 +5,203 @@
 [![Playwright](https://img.shields.io/badge/Playwright-1.61.1-green.svg)](https://playwright.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A production-ready, enterprise-grade API test automation framework built using **Playwright APIRequestContext**, **TypeScript**, and **AJV Schema Validation**, targeting the Restful Booker API. 
+A production-ready API test automation framework built with **Playwright APIRequestContext**, **TypeScript**, and **AJV Schema Validation**, targeting the Restful Booker API. 
 
-This framework is built using clean architecture patterns, SOLID principles, and strict separation of concerns, serving as a template for mid-to-large-scale QA engineering organizations.
+This framework demonstrates clean architecture patterns, dependency injection (DI), and strict separation of concerns, serving as an enterprise template for scalable API testing.
 
 ---
 
-## 🏗️ Architectural Core
+## 🏗️ Architecture Overview
 
-For a comprehensive review of design choices, refer to the [Architecture Documentation](docs/ARCHITECTURE.md).
+The framework isolates tests from HTTP details, configuration management, and database-like test state setup. 
 
-* **Strict Dependency Injection**: Tests rely on Playwright custom fixtures (`src/fixtures/index.ts`) for instance creation.
-* **Encapsulated Config Layer**: Zero raw `process.env` calls outside `env.ts`. Safe, validated config state objects compile instantly at execution bootstrap.
-* **Separation of Transport & Domain Logic**: All network calls route through a generic, reusable [ApiClient](src/clients/ApiClient.ts). Business operations are encapsulated inside domain-specific services ([BookingService](src/services/BookingService.ts)).
-* **Strict Type Safety**: Written in strict-mode TypeScript (NodeNext resolution), using custom aliases and interfaces—completely eliminating `any` declarations.
-* **AJV Schema Assertion**: High-performance JSON schema validations executed inline via a consolidated validator helper class.
+```mermaid
+graph TD
+    classDef layer fill:#f9f9f9,stroke:#333,stroke-width:1px;
+    classDef util fill:#e1f5fe,stroke:#0288d1,stroke-width:1px;
+
+    subgraph TestSuite ["Test Layer"]
+        Tests[Spec Tests]
+    end
+
+    subgraph DILayer ["Dependency Injection"]
+        Fixtures[Custom Fixtures / Container]
+    end
+
+    subgraph ServiceLayer ["Domain Services"]
+        Services[Domain Services e.g., BookingService]
+    end
+
+    subgraph TransportLayer ["HTTP Transport"]
+        ApiClient[ApiClient Wrapper]
+        PWRequest[Playwright APIRequestContext]
+    end
+
+    subgraph Utils ["Cross-Cutting Utilities"]
+        SchemaValidator[AJV Schema Validator]
+        Cleanup[Cleanup Registry]
+        Faker[Faker Data Mocking]
+    end
+
+    Tests -->|Uses| Fixtures
+    Fixtures -->|Injects| Services
+    Fixtures -->|Injects| SchemaValidator
+    Fixtures -->|Injects| Cleanup
+    Services -->|Composes| ApiClient
+    ApiClient -->|Wraps| PWRequest
+    Tests -.->|Asserts contract via| SchemaValidator
+    Tests -.->|Generates payloads via| Faker
+
+    class Tests,Fixtures,Services,ApiClient,PWRequest layer;
+    class SchemaValidator,Cleanup,Faker util;
+```
+
+For a detailed review of design choices, see [Architecture Documentation](docs/ARCHITECTURE.md).
+
+---
+
+## 🚀 Key Features
+
+* **Dependency Injection:** Tests leverage custom Playwright fixtures (`src/fixtures/index.ts`) rather than manual instantiation of services or HTTP clients.
+* **Type-Safe API Client:** Generic `ApiClient` wraps Playwright's network stack to standardize request/response structures, headers, logs, and authentication token injections.
+* **High-Performance Contract Verification:** JSON schema validations executed inline via AJV, featuring compiled validator function caching to eliminate compilation overhead.
+* **Isolated Environment Configurations:** Strict config validation through `dotenv` and a type-safe configuration object. Environment variables are never accessed directly outside `src/config/env.ts`.
+* **Automated Test Cleanup:** A FIFO-based `CleanupRegistry` records created resources during tests and deletes them during teardown, preventing test pollution.
 
 ---
 
 ## 📂 Project Directory Structure
 
 ```
-├── .github/workflows/          # GitHub Actions CI Workflow
-├── docs/                       # Architectural and technical documentation
+├── .github/workflows/    # CI pipeline (GitHub Actions)
+├── docs/                 # Architectural documentation and ADRs
 ├── src/
-│   ├── clients/                # Generic HTTP transport client (ApiClient)
-│   ├── config/                 # Environment validation and configurations
-│   ├── constants/              # Route constants and static registries
-│   ├── fixtures/               # Dependency injection / Playwright test extensions
-│   ├── schemas/                # JSON validation schemas (AJV models)
-│   ├── services/               # Business domain wrappers (Auth, Booking)
-│   ├── types/                  # Framework type definitions
-│   └── utils/                  # Mock data generators (Faker models)
-│   └── validators/             # Schema validation wrapper (AJV validator)
-└── tests/                      # Automated functional verification suites
-    ├── auth/                   # Authentication scenarios
-    ├── booking/                # Booking CRUD suites
-    └── smoke/                  # System healthcheck ping tests
+│   ├── clients/          # HTTP client wrapper (ApiClient)
+│   ├── config/           # Environment validation and configurations
+│   ├── constants/        # Route endpoints and static registries
+│   ├── fixtures/         # Custom Playwright fixtures & cleanup tools
+│   ├── schemas/          # JSON validation schemas (AJV models)
+│   ├── services/         # API domain wrappers (Auth, Booking)
+│   ├── types/            # TypeScript type declarations
+│   ├── utils/            # Test data generators (Faker models)
+│   └── validators/       # Schema validation utility
+└── tests/                # Playwright functional verification suites
+    ├── auth/             # Authentication test scenarios
+    ├── booking/          # Booking CRUD test suites
+    └── smoke/            # API health check tests
 ```
 
 ---
 
-## 🛠️ Tech Stack & Dependencies
-
-* **Language**: TypeScript (v5)
-* **Test Runner**: Playwright Test (v1.61)
-* **Validation**: AJV (v8) + AJV Formats (v3)
-* **Configuration**: Dotenv (v17)
-* **Mocking**: Faker JS (v10)
-
----
-
-## 🚀 Setup & Execution
+## 🛠️ Quick Start
 
 ### Prerequisites
-* Node.js >= 20.x
-* npm >= 10.x
+* **Node.js** >= 20.x
+* **npm** >= 10.x
 
 ### Installation
-1. Clone the repository.
+1. Clone the repository
 2. Install dependencies:
    ```bash
    npm ci
    ```
-3. Initialize configurations:
+3. Initialize the environment configuration:
    ```bash
    cp .env.example .env
    ```
-   *(Ensure you populate the credentials inside `.env` or use the defaults).*
 
 ### Running Tests
-All runner scripts are configured directly inside `package.json`:
+All script commands are configured in `package.json`:
 
 ```bash
-# Run all tests (Smoke + Regression)
+# Run the entire test suite (Smoke + Regression)
 npm run test
 
-# Run smoke tests only (healthchecks)
+# Run only smoke/healthcheck tests
 npm run test:smoke
 
-# Run regression tests only
+# Run only regression tests
 npm run test:regression
 
-# Run specific domain test suite
+# Run specific API domain suites
 npm run test:auth
 npm run test:booking
 
-# Open HTML reports after a test execution
+# View HTML report from the latest run
 npm run report
 ```
 
 ---
 
-## 🖥️ CI/CD Integration
-This repository integrates a fully functional GitHub Actions pipeline defined in `.github/workflows/api-tests.yml`. The workflow executes:
-* Dependency resolution check and installation (`npm ci`).
-* Test execution against target environments.
-* Automatic artifact persistence uploading HTML execution results for post-run analysis.
+## 🖥️ Example Test
+
+Tests remain clean and readable by delegating HTTP, validation, and setup/teardown mechanics to injected fixtures:
+
+```typescript
+import { test, expect } from '@fixtures/index';
+import { CREATE_BOOKING_RESPONSE_SCHEMA } from '@schemas/booking.schema';
+import { DataUtils } from '@utils/data.utils';
+
+test.describe('Create Booking API Tests', () => {
+  test('should successfully create a new booking', async ({
+    bookingService,
+    schemaValidator,
+    cleanup,
+  }) => {
+    // 1. Arrange & Act
+    const payload = DataUtils.generateBooking();
+    const response = await bookingService.createBooking(payload);
+
+    // 2. Assert
+    expect(response.status).toBe(200);
+    expect(response.body.bookingid).toBeGreaterThan(0);
+    expect(response.body.booking).toEqual(payload);
+
+    // 3. Defer Cleanup
+    if (response.body?.bookingid) {
+      cleanup.defer(async () => {
+        await bookingService.deleteBooking(response.body.bookingid);
+      });
+    }
+
+    // 4. Validate API Contract
+    const validation = schemaValidator.validate(
+      CREATE_BOOKING_RESPONSE_SCHEMA,
+      response.body,
+    );
+    expect(validation.isValid, `Schema errors: ${validation.errors?.join('\n')}`).toBe(true);
+  });
+});
+```
+
+---
+
+## 📊 CI/CD & Reporting
+
+This repository runs a GitHub Actions workflow defined in `.github/workflows/api-tests.yml`. 
+
+### Pipeline Workflow:
+1. **Setup:** Node.js installation and secure dependency caching (`npm ci`).
+2. **Configuration:** Instantiates `.env` dynamically with sensible fallback defaults or repository secrets.
+3. **Execution:** Runs the complete Playwright test suite in parallel.
+4. **Publishing:** Persists HTML test results to GitHub Artifacts with a 30-day retention window.
+
+---
+
+## 🏛️ Engineering Decisions & ADRs
+
+The architectural choices in this project are documented to explain trade-offs and rationale:
+- Refer to [Architecture Design](docs/ARCHITECTURE.md) for details on structural separation and design patterns.
+- Refer to [Engineering Decisions Log](docs/ENGINEERING_DECISIONS.md) to understand implementation strategies.
+- Review Architecture Decision Records (ADRs) under `docs/adr/`:
+  - [ADR 0001: Native APIRequestContext vs Third-Party Clients](docs/adr/0001-framework-http-client.md)
+  - [ADR 0002: AJV Schema Validation and Compiled Caching](docs/adr/0002-schema-validation.md)
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] Add API Rate Limit resiliency with built-in retry options in `ApiClient`.
+- [ ] Implement visual test coverage reports for endpoints under test.
+- [ ] Integrate mock server setups for downstream dependencies.
+- [ ] Enable slack/email alerting hooks inside the CI pipeline failures.
