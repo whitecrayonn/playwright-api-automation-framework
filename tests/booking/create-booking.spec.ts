@@ -6,6 +6,7 @@ test.describe('Create Booking API Tests @booking', () => {
   test('should successfully create a new booking', async ({
     bookingService,
     schemaValidator,
+    cleanup,
   }) => {
     const payload = DataUtils.generateBooking();
 
@@ -15,6 +16,13 @@ test.describe('Create Booking API Tests @booking', () => {
     expect(response.body.bookingid).toBeDefined();
     expect(response.body.bookingid).toBeGreaterThan(0);
     expect(response.body.booking).toEqual(payload);
+
+    // Defer automatic deletion of the resource using the cleanup registry tool
+    if (response.body?.bookingid) {
+      cleanup.defer(async () => {
+        await bookingService.deleteBooking(response.body.bookingid);
+      });
+    }
 
     // Schema Validation
     const validationResult = schemaValidator.validate(

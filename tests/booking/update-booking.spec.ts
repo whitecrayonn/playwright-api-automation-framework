@@ -5,7 +5,7 @@ import { DataUtils } from '@utils/data.utils';
 test.describe('Update Booking API Tests @booking', () => {
   let bookingId: number;
 
-  test.beforeEach(async ({ bookingService, apiClient, workerToken }) => {
+  test.beforeEach(async ({ bookingService, apiClient, workerToken, cleanup }) => {
     // Inject the worker-cached authentication token safely into the test-scoped ApiClient session
     apiClient.setToken(workerToken);
 
@@ -13,6 +13,13 @@ test.describe('Update Booking API Tests @booking', () => {
     const payload = DataUtils.generateBooking();
     const createResponse = await bookingService.createBooking(payload);
     bookingId = createResponse.body.bookingid;
+
+    // Register transactional cleanup passing the robust worker authorization token override
+    if (bookingId) {
+      cleanup.defer(async () => {
+        await bookingService.deleteBooking(bookingId, workerToken);
+      });
+    }
   });
 
   test('should successfully update a booking completely using PUT', async ({

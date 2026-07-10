@@ -27,11 +27,19 @@ test.describe('Get Booking API Tests @booking', () => {
   test('should successfully retrieve a specific booking by ID', async ({
     bookingService,
     schemaValidator,
+    cleanup,
   }) => {
     // 1. Arrange: Create a booking to guarantee its existence
     const newBookingPayload = DataUtils.generateBooking();
     const createResponse = await bookingService.createBooking(newBookingPayload);
     const bookingId = createResponse.body.bookingid;
+
+    // Defer cleanup of the arranged entity
+    if (bookingId) {
+      cleanup.defer(async () => {
+        await bookingService.deleteBooking(bookingId);
+      });
+    }
 
     // 2. Act: Fetch the booking detail
     const response = await bookingService.getBooking(bookingId);
@@ -53,11 +61,19 @@ test.describe('Get Booking API Tests @booking', () => {
 
   test('should successfully filter booking IDs by name parameters', async ({
     bookingService,
+    cleanup,
   }) => {
     // 1. Arrange: Create a booking with unique names
     const newBookingPayload = DataUtils.generateBooking();
     const createResponse = await bookingService.createBooking(newBookingPayload);
     const bookingId = createResponse.body.bookingid;
+
+    // Defer cleanup of the arranged entity
+    if (bookingId) {
+      cleanup.defer(async () => {
+        await bookingService.deleteBooking(bookingId);
+      });
+    }
 
     const filters = {
       firstname: newBookingPayload.firstname,
