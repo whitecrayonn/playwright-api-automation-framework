@@ -1,24 +1,13 @@
 import { test, expect } from '@fixtures/index';
 import { BOOKING_SCHEMA } from '@schemas/booking.schema';
 import { DataUtils } from '@utils/data.utils';
-import { config } from '@config/config';
 
 test.describe('Update Booking API Tests @booking', () => {
-  let token: string;
   let bookingId: number;
 
-  test.beforeAll(async ({ authService }) => {
-    // Authenticate and fetch token once for the suite
-    const authResponse = await authService.createToken({
-      username: config.auth.username,
-      password: config.auth.password,
-    });
-    token = authResponse.body.token;
-  });
-
-  test.beforeEach(async ({ bookingService, apiClient }) => {
-    // Inject the authentication token into the test-scoped ApiClient session
-    apiClient.setToken(token);
+  test.beforeEach(async ({ bookingService, apiClient, workerToken }) => {
+    // Inject the worker-cached authentication token safely into the test-scoped ApiClient session
+    apiClient.setToken(workerToken);
 
     // Generate a fresh booking before each update scenario
     const payload = DataUtils.generateBooking();

@@ -1,22 +1,12 @@
 import { test, expect } from '@fixtures/index';
 import { DataUtils } from '@utils/data.utils';
-import { config } from '@config/config';
 
 test.describe('Delete Booking API Tests @booking', () => {
-  let token: string;
   let bookingId: number;
 
-  test.beforeAll(async ({ authService }) => {
-    const authResponse = await authService.createToken({
-      username: config.auth.username,
-      password: config.auth.password,
-    });
-    token = authResponse.body.token;
-  });
-
-  test.beforeEach(async ({ bookingService, apiClient }) => {
-    // Inject the authentication token into the test-scoped ApiClient session
-    apiClient.setToken(token);
+  test.beforeEach(async ({ bookingService, apiClient, workerToken }) => {
+    // Inject the worker-cached authentication token safely into the test-scoped ApiClient session
+    apiClient.setToken(workerToken);
 
     const payload = DataUtils.generateBooking();
     const createResponse = await bookingService.createBooking(payload);
