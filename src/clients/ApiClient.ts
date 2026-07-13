@@ -152,6 +152,12 @@ export class ApiClient {
         return this.request.patch(endpoint, options);
       case 'DELETE':
         return this.request.delete(endpoint, options);
+      default: {
+        const exhaustiveCheck: never = method;
+        throw new Error(
+          `ApiClient received an unsupported HTTP method: "${String(exhaustiveCheck)}"`,
+        );
+      }
     }
   }
 
@@ -177,7 +183,18 @@ export class ApiClient {
 
     try {
       return JSON.parse(text) as T;
-    } catch {
+    } catch (error) {
+      // A body that advertises JSON but fails to parse indicates a real
+      // problem (truncated payload, upstream error page, etc.). Surface it
+      // instead of silently masking it, while still falling back to the raw
+      // text so genuinely non-JSON endpoints keep working.
+      const contentType = response.headers()['content-type'] ?? '';
+      if (contentType.toLowerCase().includes('json')) {
+        const reason = error instanceof Error ? error.message : String(error);
+        console.warn(
+          `[API Client] Response declared Content-Type "${contentType}" but the body could not be parsed as JSON (${reason}). Falling back to raw text.`,
+        );
+      }
       return text as unknown as T;
     }
   }
