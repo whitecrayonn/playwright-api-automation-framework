@@ -1,6 +1,7 @@
 import { APIRequestContext, APIResponse } from '@playwright/test';
 import { ApiRequestOptions, ApiResponse, HttpMethod } from '@app-types/api.types';
 import { config } from '@config/config';
+import { buildTokenCookie } from '@utils/http.utils';
 
 /**
  * Centralized HTTP client for all API interactions.
@@ -123,7 +124,7 @@ export class ApiClient {
 
     // Inject token if present at client session level and not overridden by local options
     if (this.authToken && !headers['Cookie'] && !headers['cookie']) {
-      headers['Cookie'] = `token=${this.authToken}`;
+      headers['Cookie'] = buildTokenCookie(this.authToken);
     }
 
     if (Object.keys(headers).length > 0) {
@@ -193,10 +194,10 @@ export class ApiClient {
   ): void {
     console.log(`\n[API Request] ${method} ${url}`);
     if (options.headers) {
-      console.log(`  Headers: ${JSON.stringify(options.headers, null, 2).replace(/\n/g, '\n  ')}`);
+      console.log(`  Headers: ${this.formatDetail(options.headers)}`);
     }
     if (options.data !== undefined) {
-      console.log(`  Body: ${typeof options.data === 'object' ? JSON.stringify(options.data, null, 2).replace(/\n/g, '\n  ') : options.data}`);
+      console.log(`  Body: ${this.formatDetail(options.data)}`);
     }
   }
 
@@ -208,10 +209,20 @@ export class ApiClient {
     responseTime: number,
   ): void {
     console.log(`[API Response] ${status} ${statusText} (${responseTime}ms)`);
-    console.log(`  Headers: ${JSON.stringify(headers, null, 2).replace(/\n/g, '\n  ')}`);
+    console.log(`  Headers: ${this.formatDetail(headers)}`);
     if (body !== null) {
-      console.log(`  Body: ${typeof body === 'object' ? JSON.stringify(body, null, 2).replace(/\n/g, '\n  ') : body}`);
+      console.log(`  Body: ${this.formatDetail(body)}`);
     }
     console.log('');
+  }
+
+  /**
+   * Formats a loggable value: objects are pretty-printed JSON indented to align
+   * under the log label; primitives are rendered as-is.
+   */
+  private formatDetail(value: unknown): string {
+    return typeof value === 'object' && value !== null
+      ? JSON.stringify(value, null, 2).replace(/\n/g, '\n  ')
+      : String(value);
   }
 }

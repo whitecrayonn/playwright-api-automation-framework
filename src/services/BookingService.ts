@@ -1,6 +1,7 @@
 import { ApiClient } from '@clients/ApiClient';
 import { ENDPOINTS } from '@constants/endpoints';
-import { ApiResponse, ApiRequestOptions } from '@app-types/api.types';
+import { ApiResponse } from '@app-types/api.types';
+import { withAuthToken } from '@utils/http.utils';
 import {
   Booking,
   BookingIdResponse,
@@ -62,13 +63,10 @@ export class BookingService {
     payload: Booking,
     token?: string,
   ): Promise<ApiResponse<Booking>> {
-    const options: ApiRequestOptions = { data: payload };
-
-    if (token) {
-      options.headers = { Cookie: `token=${token}` };
-    }
-
-    return this.apiClient.put<Booking>(ENDPOINTS.BOOKING_ID(id), options);
+    return this.apiClient.put<Booking>(
+      ENDPOINTS.BOOKING_ID(id),
+      withAuthToken({ data: payload }, token),
+    );
   }
 
   /**
@@ -83,13 +81,10 @@ export class BookingService {
     payload: Partial<Booking>,
     token?: string,
   ): Promise<ApiResponse<Booking>> {
-    const options: ApiRequestOptions = { data: payload };
-
-    if (token) {
-      options.headers = { Cookie: `token=${token}` };
-    }
-
-    return this.apiClient.patch<Booking>(ENDPOINTS.BOOKING_ID(id), options);
+    return this.apiClient.patch<Booking>(
+      ENDPOINTS.BOOKING_ID(id),
+      withAuthToken({ data: payload }, token),
+    );
   }
 
   /**
@@ -103,12 +98,9 @@ export class BookingService {
     id: number,
     token?: string,
   ): Promise<ApiResponse<string>> {
-    const options: ApiRequestOptions = {};
-
-    if (token) {
-      options.headers = { Cookie: `token=${token}` };
-    }
-
-    return this.apiClient.delete<string>(ENDPOINTS.BOOKING_ID(id), options);
+    return this.apiClient.delete<string>(
+      ENDPOINTS.BOOKING_ID(id),
+      withAuthToken({}, token),
+    );
   }
 }

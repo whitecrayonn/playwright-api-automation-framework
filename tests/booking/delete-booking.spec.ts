@@ -1,5 +1,5 @@
 import { test, expect } from '@fixtures/index';
-import { DataUtils } from '@utils/data.utils';
+import { createTrackedBooking } from '@support/booking.helpers';
 
 test.describe('Delete Booking API Tests @booking @regression', () => {
   let bookingId: number;
@@ -8,16 +8,8 @@ test.describe('Delete Booking API Tests @booking @regression', () => {
     // Inject the worker-cached authentication token safely into the test-scoped ApiClient session
     apiClient.setToken(workerToken);
 
-    const payload = DataUtils.generateBooking();
-    const createResponse = await bookingService.createBooking(payload);
-    bookingId = createResponse.body.bookingid;
-
-    // Register cleanup closure passing the robust worker administrative token override
-    if (bookingId) {
-      cleanup.defer(async () => {
-        await bookingService.deleteBooking(bookingId, workerToken);
-      });
-    }
+    // Arrange a booking, registering worker-token cleanup for teardown
+    ({ bookingId } = await createTrackedBooking(bookingService, cleanup, workerToken));
   });
 
   test('should successfully delete a booking using DELETE', async ({

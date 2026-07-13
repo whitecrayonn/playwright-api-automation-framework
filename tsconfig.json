@@ -22,7 +22,8 @@
             "@services/*": ["src/services/*"],
             "@app-types/*": ["src/types/*"],
             "@utils/*": ["src/utils/*"],
-            "@validators/*": ["src/validators/*"]
+            "@validators/*": ["src/validators/*"],
+            "@support/*": ["tests/support/*"]
         }
     },
     "include": [
