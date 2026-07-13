@@ -26,20 +26,20 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      # Credentials come from repository secrets. The fallbacks are the
+      # PUBLIC Restful Booker demo credentials (see restful-booker.herokuapp.com)
+      # and are safe to keep in source only because that sandbox is public.
+      # For any non-public target API, configure the secrets below instead.
       - name: Create .env File
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           AUTH_USERNAME: ${{ secrets.AUTH_USERNAME }}
           AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
         run: |
-          if [ -z "$AUTH_USERNAME" ] || [ -z "$AUTH_PASSWORD" ]; then
-            echo "::error::AUTH_USERNAME and AUTH_PASSWORD repository secrets must be configured."
-            exit 1
-          fi
           {
             echo "BASE_URL=${BASE_URL:-https://restful-booker.herokuapp.com}"
-            echo "AUTH_USERNAME=${AUTH_USERNAME}"
-            echo "AUTH_PASSWORD=${AUTH_PASSWORD}"
+            echo "AUTH_USERNAME=${AUTH_USERNAME:-admin}"
+            echo "AUTH_PASSWORD=${AUTH_PASSWORD:-password123}"
           } >> .env
 
       - name: Execute Test Suite
