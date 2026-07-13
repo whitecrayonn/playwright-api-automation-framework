@@ -27,10 +27,20 @@ jobs:
         run: npm ci
 
       - name: Create .env File
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          AUTH_USERNAME: ${{ secrets.AUTH_USERNAME }}
+          AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
         run: |
-          echo "BASE_URL=${{ secrets.BASE_URL || 'https://restful-booker.herokuapp.com' }}" >> .env
-          echo "AUTH_USERNAME=${{ secrets.AUTH_USERNAME || 'admin' }}" >> .env
-          echo "AUTH_PASSWORD=${{ secrets.AUTH_PASSWORD || 'password123' }}" >> .env
+          if [ -z "$AUTH_USERNAME" ] || [ -z "$AUTH_PASSWORD" ]; then
+            echo "::error::AUTH_USERNAME and AUTH_PASSWORD repository secrets must be configured."
+            exit 1
+          fi
+          {
+            echo "BASE_URL=${BASE_URL:-https://restful-booker.herokuapp.com}"
+            echo "AUTH_USERNAME=${AUTH_USERNAME}"
+            echo "AUTH_PASSWORD=${AUTH_PASSWORD}"
+          } >> .env
 
       - name: Execute Test Suite
         run: npm run test
