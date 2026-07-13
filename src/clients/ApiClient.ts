@@ -237,11 +237,11 @@ export class ApiClient {
       const safeHeaders = this.redactHeaders(
         options.headers as Record<string, string>,
       );
-      console.log(`  Headers: ${JSON.stringify(safeHeaders, null, 2).replace(/\n/g, '\n  ')}`);
+      console.log(`  Headers: ${this.formatDetail(safeHeaders)}`);
     }
     if (options.data !== undefined) {
       const safeBody = this.redactValue(options.data);
-      console.log(`  Body: ${typeof safeBody === 'object' ? JSON.stringify(safeBody, null, 2).replace(/\n/g, '\n  ') : safeBody}`);
+      console.log(`  Body: ${this.formatDetail(safeBody)}`);
     }
   }
 
@@ -254,12 +254,22 @@ export class ApiClient {
   ): void {
     console.log(`[API Response] ${status} ${statusText} (${responseTime}ms)`);
     const safeHeaders = this.redactHeaders(headers);
-    console.log(`  Headers: ${JSON.stringify(safeHeaders, null, 2).replace(/\n/g, '\n  ')}`);
+    console.log(`  Headers: ${this.formatDetail(safeHeaders)}`);
     if (body !== null) {
       const safeBody = this.redactValue(body);
-      console.log(`  Body: ${typeof safeBody === 'object' ? JSON.stringify(safeBody, null, 2).replace(/\n/g, '\n  ') : safeBody}`);
+      console.log(`  Body: ${this.formatDetail(safeBody)}`);
     }
     console.log('');
+  }
+
+  /**
+   * Formats a loggable value: objects are pretty-printed JSON indented to align
+   * under the log label; primitives are rendered as-is.
+   */
+  private formatDetail(value: unknown): string {
+    return typeof value === 'object' && value !== null
+      ? JSON.stringify(value, null, 2).replace(/\n/g, '\n  ')
+      : String(value);
   }
 
   /**
