@@ -1,6 +1,7 @@
 import { test, expect } from '@fixtures/index';
 import { AUTH_RESPONSE_SCHEMA } from '@schemas/auth.schema';
 import { config } from '@config/config';
+import { expectValidSchema } from '@support/schema.helpers';
 
 test.describe('Authentication API Tests @auth @regression', () => {
   test('should successfully generate an auth token with valid credentials', async ({
@@ -18,15 +19,12 @@ test.describe('Authentication API Tests @auth @regression', () => {
     expect(response.body.token).toBeDefined();
     expect(response.body.token.length).toBeGreaterThan(0);
 
-    // Schema Validation
-    const validationResult = schemaValidator.validate(
+    expectValidSchema(
+      schemaValidator,
       AUTH_RESPONSE_SCHEMA,
       response.body,
+      'Auth response schema',
     );
-    expect(
-      validationResult.isValid,
-      `Auth response schema errors:\n${validationResult.errors?.join('\n')}`,
-    ).toBe(true);
   });
 
   test('should return bad credentials response when submitting an invalid password', async ({

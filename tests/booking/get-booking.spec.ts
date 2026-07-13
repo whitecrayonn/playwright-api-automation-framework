@@ -1,6 +1,7 @@
 import { test, expect } from '@fixtures/index';
 import { BOOKING_IDS_SCHEMA, BOOKING_SCHEMA } from '@schemas/booking.schema';
-import { DataUtils } from '@utils/data.utils';
+import { createTrackedBooking } from '@support/booking.helpers';
+import { expectValidSchema } from '@support/schema.helpers';
 
 test.describe('Get Booking API Tests @booking @regression', () => {
   test('should successfully retrieve all booking IDs', async ({
@@ -13,15 +14,12 @@ test.describe('Get Booking API Tests @booking @regression', () => {
     expect(Array.isArray(response.body)).toBe(true);
     expect(response.body.length).toBeGreaterThan(0);
 
-    // Schema Validation
-    const validationResult = schemaValidator.validate(
+    expectValidSchema(
+      schemaValidator,
       BOOKING_IDS_SCHEMA,
       response.body,
+      'Booking IDs schema',
     );
-    expect(
-      validationResult.isValid,
-      `Booking IDs schema errors:\n${validationResult.errors?.join('\n')}`,
-    ).toBe(true);
   });
 
   test('should successfully retrieve a specific booking by ID', async ({
@@ -30,16 +28,10 @@ test.describe('Get Booking API Tests @booking @regression', () => {
     cleanup,
   }) => {
     // 1. Arrange: Create a booking to guarantee its existence
-    const newBookingPayload = DataUtils.generateBooking();
-    const createResponse = await bookingService.createBooking(newBookingPayload);
-    const bookingId = createResponse.body.bookingid;
-
-    // Defer cleanup of the arranged entity
-    if (bookingId) {
-      cleanup.defer(async () => {
-        await bookingService.deleteBooking(bookingId);
-      });
-    }
+    const { bookingId, payload: newBookingPayload } = await createTrackedBooking(
+      bookingService,
+      cleanup,
+    );
 
     // 2. Act: Fetch the booking detail
     const response = await bookingService.getBooking(bookingId);
@@ -48,15 +40,12 @@ test.describe('Get Booking API Tests @booking @regression', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual(newBookingPayload);
 
-    // Schema Validation
-    const validationResult = schemaValidator.validate(
+    expectValidSchema(
+      schemaValidator,
       BOOKING_SCHEMA,
       response.body,
+      'Booking detail schema',
     );
-    expect(
-      validationResult.isValid,
-      `Booking detail schema errors:\n${validationResult.errors?.join('\n')}`,
-    ).toBe(true);
   });
 
   test('should successfully filter booking IDs by name parameters', async ({
@@ -64,16 +53,10 @@ test.describe('Get Booking API Tests @booking @regression', () => {
     cleanup,
   }) => {
     // 1. Arrange: Create a booking with unique names
-    const newBookingPayload = DataUtils.generateBooking();
-    const createResponse = await bookingService.createBooking(newBookingPayload);
-    const bookingId = createResponse.body.bookingid;
-
-    // Defer cleanup of the arranged entity
-    if (bookingId) {
-      cleanup.defer(async () => {
-        await bookingService.deleteBooking(bookingId);
-      });
-    }
+    const { bookingId, payload: newBookingPayload } = await createTrackedBooking(
+      bookingService,
+      cleanup,
+    );
 
     const filters = {
       firstname: newBookingPayload.firstname,

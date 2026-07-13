@@ -1,6 +1,8 @@
 import { test, expect } from '@fixtures/index';
 import { CREATE_BOOKING_RESPONSE_SCHEMA } from '@schemas/booking.schema';
 import { DataUtils } from '@utils/data.utils';
+import { deferBookingDeletion } from '@support/booking.helpers';
+import { expectValidSchema } from '@support/schema.helpers';
 
 test.describe('Create Booking API Tests @booking @regression', () => {
   test('should successfully create a new booking', async ({
@@ -17,21 +19,13 @@ test.describe('Create Booking API Tests @booking @regression', () => {
     expect(response.body.bookingid).toBeGreaterThan(0);
     expect(response.body.booking).toEqual(payload);
 
-    // Defer automatic deletion of the resource using the cleanup registry tool
-    if (response.body?.bookingid) {
-      cleanup.defer(async () => {
-        await bookingService.deleteBooking(response.body.bookingid);
-      });
-    }
+    deferBookingDeletion(cleanup, bookingService, response.body?.bookingid);
 
-    // Schema Validation
-    const validationResult = schemaValidator.validate(
+    expectValidSchema(
+      schemaValidator,
       CREATE_BOOKING_RESPONSE_SCHEMA,
       response.body,
+      'Create booking response schema',
     );
-    expect(
-      validationResult.isValid,
-      `Create booking response schema errors:\n${validationResult.errors?.join('\n')}`,
-    ).toBe(true);
   });
 });

@@ -1,6 +1,8 @@
 import { test, expect } from '@fixtures/index';
 import { BOOKING_SCHEMA } from '@schemas/booking.schema';
 import { DataUtils } from '@utils/data.utils';
+import { createTrackedBooking } from '@support/booking.helpers';
+import { expectValidSchema } from '@support/schema.helpers';
 
 test.describe('Update Booking API Tests @booking @regression', () => {
   let bookingId: number;
@@ -9,17 +11,8 @@ test.describe('Update Booking API Tests @booking @regression', () => {
     // Inject the worker-cached authentication token safely into the test-scoped ApiClient session
     apiClient.setToken(workerToken);
 
-    // Generate a fresh booking before each update scenario
-    const payload = DataUtils.generateBooking();
-    const createResponse = await bookingService.createBooking(payload);
-    bookingId = createResponse.body.bookingid;
-
-    // Register transactional cleanup passing the robust worker authorization token override
-    if (bookingId) {
-      cleanup.defer(async () => {
-        await bookingService.deleteBooking(bookingId, workerToken);
-      });
-    }
+    // Arrange a fresh booking, registering worker-token cleanup for teardown
+    ({ bookingId } = await createTrackedBooking(bookingService, cleanup, workerToken));
   });
 
   test('should successfully update a booking completely using PUT', async ({
@@ -37,12 +30,7 @@ test.describe('Update Booking API Tests @booking @regression', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual(updatePayload);
 
-    // Schema Validation
-    const validationResult = schemaValidator.validate(
-      BOOKING_SCHEMA,
-      response.body,
-    );
-    expect(validationResult.isValid).toBe(true);
+    expectValidSchema(schemaValidator, BOOKING_SCHEMA, response.body, 'Booking schema');
   });
 
   test('should successfully modify a booking partially using PATCH', async ({
@@ -64,12 +52,7 @@ test.describe('Update Booking API Tests @booking @regression', () => {
     expect(response.body.firstname).toBe(patchPayload.firstname);
     expect(response.body.totalprice).toBe(patchPayload.totalprice);
 
-    // Schema Validation
-    const validationResult = schemaValidator.validate(
-      BOOKING_SCHEMA,
-      response.body,
-    );
-    expect(validationResult.isValid).toBe(true);
+    expectValidSchema(schemaValidator, BOOKING_SCHEMA, response.body, 'Booking schema');
   });
 
   test('should reject updates when authorization token is missing or invalid', async ({
