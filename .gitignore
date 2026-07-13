@@ -18,3 +18,7 @@ node_modules/
 
 # TypeScript build output
 /dist/
+
+# Coverage output (c8)
+/coverage/
+/reports/coverage/
