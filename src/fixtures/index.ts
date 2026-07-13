@@ -94,19 +94,34 @@ export const test = baseTest.extend<AppFixtures, AppWorkerFixtures>({
   workerToken: [async ({ }, use) => {
     // Spin up an isolated, worker-scoped standalone request context mapping to configuration baselines
     const requestContext = await pfRequest.newContext({ baseURL: config.api.baseUrl });
-    const apiClient = new ApiClient(requestContext);
-    const authService = new AuthService(apiClient);
 
-    const authResponse = await authService.createToken({
-      username: config.auth.username,
-      password: config.auth.password,
-    });
+    try {
+      const apiClient = new ApiClient(requestContext);
+      const authService = new AuthService(apiClient);
 
-    // Provide the compiled token string to all downstream test execution hooks
-    await use(authResponse.body.token);
+      const authResponse = await authService.createToken({
+        username: config.auth.username,
+        password: config.auth.password,
+      });
 
-    // Gracefully tear down the standalone network context upon worker thread termination
-    await requestContext.dispose();
+      // Fail loudly if authentication did not yield a usable token. Otherwise an
+      // undefined token would propagate silently and surface as confusing
+      // authorization errors deep inside unrelated tests.
+      if (authResponse.status !== 200 || !authResponse.body?.token) {
+        throw new Error(
+          `Worker authentication failed: expected HTTP 200 with a token but received ` +
+            `${authResponse.status} ${authResponse.statusText}. Response body: ` +
+            `${JSON.stringify(authResponse.body)}`,
+        );
+      }
+
+      // Provide the compiled token string to all downstream test execution hooks
+      await use(authResponse.body.token);
+    } finally {
+      // Gracefully tear down the standalone network context even if setup fails,
+      // preventing a leaked request context on the worker thread.
+      await requestContext.dispose();
+    }
   }, { scope: 'worker' }],
 
   apiClient: async ({ request }, use) => {
@@ -123,8 +138,14 @@ export const test = baseTest.extend<AppFixtures, AppWorkerFixtures>({
   },
   cleanup: async ({ }, use) => {
     const registry = new CleanupRegistry();
-    await use(registry);
-    await registry.runCleanup();
+    try {
+      await use(registry);
+    } finally {
+      // Always drain the registry, even when the test body throws, so deferred
+      // resources are torn down and any cleanup failures are propagated rather
+      // than skipped.
+      await registry.runCleanup();
+    }
   },
 });
 

@@ -153,6 +153,12 @@ export class ApiClient {
         return this.request.patch(endpoint, options);
       case 'DELETE':
         return this.request.delete(endpoint, options);
+      default: {
+        const exhaustiveCheck: never = method;
+        throw new Error(
+          `ApiClient received an unsupported HTTP method: "${String(exhaustiveCheck)}"`,
+        );
+      }
     }
   }
 
@@ -178,7 +184,18 @@ export class ApiClient {
 
     try {
       return JSON.parse(text) as T;
-    } catch {
+    } catch (error) {
+      // A body that advertises JSON but fails to parse indicates a real
+      // problem (truncated payload, upstream error page, etc.). Surface it
+      // instead of silently masking it, while still falling back to the raw
+      // text so genuinely non-JSON endpoints keep working.
+      const contentType = response.headers()['content-type'] ?? '';
+      if (contentType.toLowerCase().includes('json')) {
+        const reason = error instanceof Error ? error.message : String(error);
+        console.warn(
+          `[API Client] Response declared Content-Type "${contentType}" but the body could not be parsed as JSON (${reason}). Falling back to raw text.`,
+        );
+      }
       return text as unknown as T;
     }
   }
@@ -187,6 +204,29 @@ export class ApiClient {
    * Observability Logger Helpers
    * ────────────────────────────────────────────── */
 
+  /** Header names whose values must never be written to logs. */
+  private static readonly SENSITIVE_HEADERS = new Set([
+    'cookie',
+    'set-cookie',
+    'authorization',
+    'proxy-authorization',
+    'x-api-key',
+    'api-key',
+  ]);
+
+  /** Body/field names whose values must never be written to logs. */
+  private static readonly SENSITIVE_FIELDS = new Set([
+    'password',
+    'token',
+    'accesstoken',
+    'refreshtoken',
+    'secret',
+    'apikey',
+    'authorization',
+  ]);
+
+  private static readonly REDACTED = '[REDACTED]';
+
   private logRequest(
     method: HttpMethod,
     url: string,
@@ -194,10 +234,14 @@ export class ApiClient {
   ): void {
     console.log(`\n[API Request] ${method} ${url}`);
     if (options.headers) {
-      console.log(`  Headers: ${this.formatDetail(options.headers)}`);
+      const safeHeaders = this.redactHeaders(
+        options.headers as Record<string, string>,
+      );
+      console.log(`  Headers: ${JSON.stringify(safeHeaders, null, 2).replace(/\n/g, '\n  ')}`);
     }
     if (options.data !== undefined) {
-      console.log(`  Body: ${this.formatDetail(options.data)}`);
+      const safeBody = this.redactValue(options.data);
+      console.log(`  Body: ${typeof safeBody === 'object' ? JSON.stringify(safeBody, null, 2).replace(/\n/g, '\n  ') : safeBody}`);
     }
   }
 
@@ -209,20 +253,50 @@ export class ApiClient {
     responseTime: number,
   ): void {
     console.log(`[API Response] ${status} ${statusText} (${responseTime}ms)`);
-    console.log(`  Headers: ${this.formatDetail(headers)}`);
+    const safeHeaders = this.redactHeaders(headers);
+    console.log(`  Headers: ${JSON.stringify(safeHeaders, null, 2).replace(/\n/g, '\n  ')}`);
     if (body !== null) {
-      console.log(`  Body: ${this.formatDetail(body)}`);
+      const safeBody = this.redactValue(body);
+      console.log(`  Body: ${typeof safeBody === 'object' ? JSON.stringify(safeBody, null, 2).replace(/\n/g, '\n  ') : safeBody}`);
     }
     console.log('');
   }
 
   /**
-   * Formats a loggable value: objects are pretty-printed JSON indented to align
-   * under the log label; primitives are rendered as-is.
+   * Returns a shallow copy of the headers with the values of any
+   * sensitive header (cookies, authorization tokens, API keys) masked.
    */
-  private formatDetail(value: unknown): string {
-    return typeof value === 'object' && value !== null
-      ? JSON.stringify(value, null, 2).replace(/\n/g, '\n  ')
-      : String(value);
+  private redactHeaders(
+    headers: Record<string, string>,
+  ): Record<string, string> {
+    const redacted: Record<string, string> = {};
+    for (const [key, value] of Object.entries(headers)) {
+      redacted[key] = ApiClient.SENSITIVE_HEADERS.has(key.toLowerCase())
+        ? ApiClient.REDACTED
+        : value;
+    }
+    return redacted;
+  }
+
+  /**
+   * Recursively masks the values of any sensitive fields (passwords,
+   * tokens, secrets) so credentials are never written to logs.
+   */
+  private redactValue(value: unknown): unknown {
+    if (Array.isArray(value)) {
+      return value.map((item) => this.redactValue(item));
+    }
+
+    if (value !== null && typeof value === 'object') {
+      const redacted: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+        redacted[key] = ApiClient.SENSITIVE_FIELDS.has(key.toLowerCase())
+          ? ApiClient.REDACTED
+          : this.redactValue(val);
+      }
+      return redacted;
+    }
+
+    return value;
   }
 }

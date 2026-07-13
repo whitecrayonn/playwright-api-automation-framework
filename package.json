@@ -3,13 +3,30 @@
   "version": "1.0.0",
   "description": "Enterprise-grade API Automation Framework built with Playwright & TypeScript.",
   "private": true,
+  "type": "module",
   "scripts": {
     "test": "playwright test",
     "test:smoke": "playwright test --grep @smoke",
     "test:regression": "playwright test --grep @regression",
+    "test:unit": "playwright test tests/unit/",
     "test:auth": "playwright test tests/auth/",
     "test:booking": "playwright test tests/booking/",
+    "coverage": "c8 playwright test",
+    "coverage:unit": "c8 playwright test tests/unit/",
     "report": "playwright show-report ./reports/html"
+  },
+  "c8": {
+    "all": true,
+    "src": ["src"],
+    "extension": [".ts"],
+    "exclude": [
+      "src/types/**",
+      "src/**/*.d.ts",
+      "tests/**",
+      "playwright.config.ts"
+    ],
+    "reporter": ["text", "html", "json-summary"],
+    "reports-dir": "./reports/coverage"
   },
   "keywords": [
     "playwright",
@@ -26,6 +43,7 @@
     "@types/node": "^26.1.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
+    "c8": "11.0.0",
     "dotenv": "^17.4.2",
     "typescript": "^5.8.3"
   }
