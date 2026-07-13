@@ -19,7 +19,12 @@
     "all": true,
     "src": ["src"],
     "extension": [".ts"],
-    "exclude": ["src/types/**", "src/**/*.d.ts"],
+    "exclude": [
+      "src/types/**",
+      "src/**/*.d.ts",
+      "tests/**",
+      "playwright.config.ts"
+    ],
     "reporter": ["text", "html", "json-summary"],
     "reports-dir": "./reports/coverage"
   },
